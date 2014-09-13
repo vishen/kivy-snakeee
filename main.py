@@ -30,6 +30,7 @@ class Snake(Widget):
 
 	points = NumericProperty(0)
 	score = None
+	game_running = True
 
 	def __init__(self, *args, **kwargs):
 		super(Snake, self).__init__(*args, **kwargs)
@@ -45,6 +46,7 @@ class Snake(Widget):
 		self.food = None
 		self.points = 0
 		self.direction = "down"
+		self.game_running = True
 
 		self.canvas.clear()
 		size = self.body_size
@@ -53,11 +55,13 @@ class Snake(Widget):
 			head = Rectangle(pos=[300, 300], size=(size, size))
 			self.body.append(head)
 
-
 			x, y = self.generate_food_position()
 
 			Color(0, 1, 0)
 			self.food = Rectangle(pos=[x, y], size=(size, size))
+
+			# Generate rectangles for touch pos
+			window_size = Window.size
 
 		self.score = Label(font_size=70, text=str(self.points))
 		self.add_widget(self.score)
@@ -83,12 +87,31 @@ class Snake(Widget):
 			if not found:
 				return x, y
 
+	def on_touch_down(self, touch):
+		if self.game_running:
+			window_size = Window.size
+			print window_size, touch.pos
+			if window_size[0] - touch.pos[0] < window_size[0] / 4:
+				self.direction = "right" 
+			elif touch.pos[0] < (window_size[0] / 4):
+				self.direction = "left"
+				print window_size, touch.pos
+			elif window_size[1] - touch.pos[1] < window_size[1] / 4:
+				self.direction = "up" 
+			elif touch.pos[1] < (window_size[1] / 4):
+				self.direction = "down"
+
+		return super(Snake, self).on_touch_down(touch)
+
 	def _keyboard_closed(self):
 		self._keyboard.unbind(on_key_down=self.on_key_down)
 		self._keyboard = None
 
 	def _on_keyboard_down(self, keyboard, keycode, text, modifier):
 		_direction = keycode[1]
+		if _direction not in self.unusable_directions.keys():
+			return
+
 		if self.unusable_directions[_direction] != self.direction:
 			self.direction = _direction
 
@@ -135,6 +158,7 @@ class Snake(Widget):
 
 
 		if game_over:
+			self.game_running = False
 			Clock.unschedule(self.update)
 			self.canvas.clear()
 			l = Label(font_size=20, pos=(300, 300), 
@@ -144,10 +168,11 @@ class Snake(Widget):
 				self._initialize_game()
 				Clock.schedule_interval(self.update, SPEED)
 
-			b = Button(text="Play Again?")
+			b = Button(text="Play Again?", pos=(300, 200))
 			b.on_release = _play_again
 			self.add_widget(l)
 			self.add_widget(b)
+			self.game_running = False
 
 			return
 
